@@ -3,6 +3,7 @@ from flask_sqlalchemy import SQLAlchemy
 from flask_bcrypt import Bcrypt
 from flask_login import LoginManager
 from flask_mail import Mail
+
 from flaskblog.config import Config
 
 db = SQLAlchemy()
@@ -15,7 +16,7 @@ mail = Mail()
 
 def create_app(config_class=Config):
     app = Flask(__name__)
-    app.config.from_object(Config)
+    app.config.from_object(config_class)
 
     db.init_app(app)
     bcrypt.init_app(app)
@@ -26,10 +27,12 @@ def create_app(config_class=Config):
     from flaskblog.posts.routes import posts
     from flaskblog.main.routes import main
     from flaskblog.errors.handlers import errors
+    from flaskblog.apiv1.routes import apiv1
 
     app.register_blueprint(users)
     app.register_blueprint(posts)
     app.register_blueprint(main)
     app.register_blueprint(errors)
+    app.register_blueprint(apiv1)
 
     return app
