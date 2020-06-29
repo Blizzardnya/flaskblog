@@ -1,11 +1,10 @@
-from datetime import datetime
-
 from flask import Blueprint, request
 from flask_restful import Resource, Api, reqparse
-from flask_login import current_user, login_required
+from flask_jwt_extended import create_access_token, jwt_required, get_jwt_identity
 
-from flaskblog import db
+from flaskblog import bcrypt
 from flaskblog.models import Post, User
+from flaskblog.posts.services import create_post_service
 
 apiv1 = Blueprint('apiv1', __name__)
 api = Api(apiv1, prefix='/api/1')
@@ -15,7 +14,7 @@ posts_parser.add_argument('user', type=str)
 posts_parser.add_argument('count', type=int, required=False, help='Count of last records')
 
 
-class PostApi(Resource):
+class PostByIdApi(Resource):
     def get(self, post_id):
         post = Post.query.filter_by(id=post_id).first()
 
@@ -25,17 +24,33 @@ class PostApi(Resource):
         return {'post': {'title': post.title, 'date_posted': str(post.date_posted),
                          'content': post.content}}
 
+
+class CreatePostApi(Resource):
+    @jwt_required
     def post(self):
         try:
-            data = request.get_json()
+            email = get_jwt_identity()
+            user = User.query.filter_by(email=email).first()
 
-            db.session.add(Post(title=data['title'], date_posted=datetime.now(), content=data['content'],
-                                user_id=current_user))
-            db.session.commit()
+            if not user:
+                return {'message': 'User is not found'}, 400
+
+            if not request.is_json:
+                return {"msg": "Missing JSON in request"}, 400
+
+            title = request.json.get('title', None)
+            content = request.json.get('content', None)
+
+            if not title:
+                return {"msg": "Missing title parameter"}, 400
+            if not content:
+                return {"msg": "Missing content parameter"}, 400
+
+            create_post_service(title, content, user)
 
             return {'message': 'Post has been created'}, 201
         except Exception:
-            return {'message': f'Error with text: {str(Exception)}'}, 400
+            return {'message': f'Error'}, 400
 
 
 class PostsByUserApi(Resource):
@@ -56,5 +71,29 @@ class PostsByUserApi(Resource):
         return {'posts': output}
 
 
-api.add_resource(PostApi, '/post/<int:post_id>')
+class LoginApi(Resource):
+    def post(self):
+        if not request.is_json:
+            return {"msg": "Missing JSON in request"}, 400
+
+        email = request.json.get('email', None)
+        password = request.json.get('password', None)
+
+        if not email:
+            return {"msg": "Missing email parameter"}, 400
+        if not password:
+            return {"msg": "Missing password parameter"}, 400
+
+        user = User.query.filter_by(email=email).first()
+
+        if user and bcrypt.check_password_hash(user.password, password):
+            access_token = create_access_token(identity=email)
+            return {'access_token': access_token}, 200
+        else:
+            return {"msg": "Bad email or password"}, 401
+
+
+api.add_resource(PostByIdApi, '/post/<int:post_id>')
+api.add_resource(CreatePostApi, '/post')
 api.add_resource(PostsByUserApi, '/posts')
+api.add_resource(LoginApi, '/login')
