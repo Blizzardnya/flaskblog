@@ -2,9 +2,9 @@ from flask import (render_template, url_for, flash,
                    redirect, request, abort, Blueprint)
 from flask_login import current_user, login_required
 
-from flaskblog import db
 from flaskblog.models import Post
 from flaskblog.posts.forms import PostForm
+from flaskblog.posts.services import create_post_service, update_post_service, delete_post_service
 
 posts = Blueprint('posts', __name__)
 
@@ -15,9 +15,7 @@ def new_post():
     form = PostForm()
 
     if form.validate_on_submit():
-        post = Post(title=form.title.data, content=form.content.data, author=current_user)
-        db.session.add(post)
-        db.session.commit()
+        create_post_service(form.title.data, form.content.data, current_user)
         flash('Your post has been created!', 'success')
         return redirect(url_for('main.home'))
 
@@ -42,9 +40,7 @@ def update_post(post_id):
     form = PostForm()
 
     if form.validate_on_submit():
-        post.title = form.title.data
-        post.content = form.content.data
-        db.session.commit()
+        update_post_service(post, form.title.data, form.content.data)
         flash('Your post has been updated!', 'success')
         return redirect(url_for('posts.post', post_id=post.id))
     elif request.method == 'GET':
@@ -63,7 +59,6 @@ def delete_post(post_id):
     if post.author != current_user:
         abort(403)
 
-    db.session.delete(post)
-    db.session.commit()
+    delete_post_service(post)
     flash('Your post has been deleted!', 'success')
     return redirect(url_for('main.home'))

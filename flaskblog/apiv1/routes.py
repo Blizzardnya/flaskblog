@@ -1,11 +1,10 @@
-from datetime import datetime
-
 from flask import Blueprint, request
 from flask_restful import Resource, Api, reqparse
 from flask_jwt_extended import create_access_token, jwt_required, get_jwt_identity
 
-from flaskblog import db, bcrypt
+from flaskblog import bcrypt
 from flaskblog.models import Post, User
+from flaskblog.posts.services import create_post_service
 
 apiv1 = Blueprint('apiv1', __name__)
 api = Api(apiv1, prefix='/api/1')
@@ -47,9 +46,7 @@ class CreatePostApi(Resource):
             if not content:
                 return {"msg": "Missing content parameter"}, 400
 
-            db.session.add(Post(title=title, date_posted=datetime.now(), content=content,
-                                user_id=user.id))
-            db.session.commit()
+            create_post_service(title, content, user)
 
             return {'message': 'Post has been created'}, 201
         except Exception:

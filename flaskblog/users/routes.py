@@ -1,10 +1,11 @@
 from flask import render_template, url_for, flash, redirect, request, Blueprint
 from flask_login import login_user, current_user, logout_user, login_required
-from flaskblog import db, bcrypt
+from flaskblog import bcrypt
 from flaskblog.models import User, Post
 from flaskblog.users.forms import (RegistrationForm, LoginForm, UpdateAccountForm,
                                    RequestResetForm, ResetPasswordForm)
 from flaskblog.users.utils import save_picture, send_reset_email
+from flaskblog.users.services import create_user_service, update_user_service, reset_user_password_service
 
 users = Blueprint('users', __name__)
 
@@ -17,10 +18,7 @@ def register():
     form = RegistrationForm()
 
     if form.validate_on_submit():
-        hashed_password = bcrypt.generate_password_hash(form.password.data).decode('UTF-8')
-        user = User(username=form.username.data, email=form.email.data, password=hashed_password)
-        db.session.add(user)
-        db.session.commit()
+        create_user_service(form.username.data, form.email.data, form.password.data)
         flash('Your account has been created!', 'success')
         return redirect(url_for('users.login'))
 
@@ -58,12 +56,12 @@ def account():
     form = UpdateAccountForm()
 
     if form.validate_on_submit():
+        picture_file = None
+
         if form.picture.data:
             picture_file = save_picture(form.picture.data)
-            current_user.image_file = picture_file
-        current_user.username = form.username.data
-        current_user.email = form.email.data
-        db.session.commit()
+
+        update_user_service(current_user, form.username.data, form.email.data, picture_file)
         flash('Your account has been updated!', 'success')
         return redirect(url_for('users.account'))
     elif request.method == 'GET':
@@ -116,9 +114,7 @@ def reset_token(token):
     form = ResetPasswordForm()
 
     if form.validate_on_submit():
-        hashed_password = bcrypt.generate_password_hash(form.password.data).decode('UTF-8')
-        user.password = hashed_password
-        db.session.commit()
+        reset_user_password_service(user, form.password.data)
         flash('Your password has been updated!', 'success')
         return redirect(url_for('users.login'))
 
