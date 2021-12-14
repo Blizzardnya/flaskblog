@@ -10,3 +10,4 @@ class Config:
     MAIL_USERNAME = os.environ.get('EMAIL_USER')
     MAIL_PASSWORD = os.environ.get('EMAIL_PASS')
     JWT_SECRET_KEY = 'super-secret'
+    SQLALCHEMY_TRACK_MODIFICATIONS = False

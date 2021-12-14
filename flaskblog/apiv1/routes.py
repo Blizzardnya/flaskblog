@@ -1,6 +1,6 @@
 from flask import Blueprint, request
-from flask_restful import Resource, Api, reqparse
 from flask_jwt_extended import create_access_token, jwt_required, get_jwt_identity
+from flask_restful import Resource, Api, reqparse
 
 from flaskblog import bcrypt
 from flaskblog.models import Post, User
